@@ -1,0 +1,132 @@
+@startuml MPLS_Activity_Diagram
+
+title MPLS Training Flow - Worker Activity
+
+start
+
+:Load Configuration\n(worker_X.yaml);
+
+:Initialize Worker;
+fork
+    :Create Training Thread;
+fork again
+    :Create Aggregation Thread;
+fork again
+    :Start gRPC Server\n(Port 50051);
+end fork
+
+:Connect to Peers\n(gRPC Channels);
+
+:Load Local Dataset\n(Non-IID Partition);
+
+:Initialize Model\n(SimpleMLP);
+
+:Set Running = True;
+
+partition "Parallel Execution" {
+    fork
+        partition "Training Thread" {
+            while (iteration < max_iterations?) is (yes)
+                :Load Data Batch;
+                :Forward Pass;
+                :Compute Loss;
+                :Backward Pass;
+                :Update Weights\n(SGD);
+                :Write to Parameter Store\n(Thread-Safe);
+                :Update Gradient History;
+            endwhile (no)
+        }
+    fork again
+        partition "Aggregation Thread" {
+            while (iteration < max_iterations?) is (yes)
+                :Wait for Training Iteration;
+                
+                :Fetch Peer Metadata\n(gRPC: GetMetadata);
+                
+                :Peer Selection Algorithm;
+                note right
+                    Compute p_s:
+                    1. Normalize bandwidth B̄_s
+                    2. Normalize divergence D̄D_s
+                    3. Score = τ₁·B̄_s + τ₂·D̄D_s
+                end note
+                
+                :Layer Selection Algorithm;
+                note right
+                    Compute q_s(l):
+                    1. Get gradient variations
+                    2. Normalize per layer
+                    3. Probability distribution
+                end note
+                
+                :List Scheduling Algorithm;
+                note right
+                    Algorithm 1:
+                    1. Initialize μ₁, μ₂
+                    2. Compute efficiency E(s,l)
+                    3. Rank peers
+                    4. Phase 1: Assign layers
+                    5. Phase 2: Fill gaps
+                end note
+                
+                :Pull Layers from Peers\n(Parallel gRPC Calls);
+                
+                fork
+                    :PullLayers(peer_1);
+                fork again
+                    :PullLayers(peer_2);
+                end fork
+                
+                :Deserialize Tensors;
+                
+                :Aggregate Layers\n(Weighted Average);
+                note right
+                    Equation 1:
+                    w^(k+1)(l) = 
+                    (Σ y_s^k(l)·w_s^k(l) + w_i^k(l))
+                    / (Σ y_s^k(l) + 1)
+                end note
+                
+                :Write to Parameter Store\n(Thread-Safe);
+                
+                :Increment Iteration;
+                
+                :Log Statistics;
+            endwhile (no)
+        }
+    fork again
+        partition "gRPC Server" {
+            while (running?) is (yes)
+                :Listen for Requests;
+                
+                if (Request Type?) then (PullLayers)
+                    :Read Parameter Store\n(Thread-Safe);
+                    :Serialize Requested Layers;
+                    :Send LayerResponse;
+                elseif (GetMetadata)
+                    :Send PeerMetadata\n(data_dist, status, iter);
+                elseif (Heartbeat)
+                    :Send HeartbeatResponse;
+                else (MeasureBandwidth)
+                    :Send Test Payload;
+                endif
+            endwhile (no)
+        }
+    end fork
+}
+
+:Set Running = False;
+
+:Join Threads\n(Wait for Completion);
+
+:Shutdown gRPC Server;
+
+:Close Peer Connections;
+
+:Save Final Model\n(Optional);
+
+:Log Final Statistics;
+
+stop
+
+@enduml

@@ -1,0 +1,152 @@
+@startuml MPLS_Sequence_Diagram
+
+title Distributed MPLS Training - Single Iteration
+
+actor User
+participant "Worker 0\n10.96.0.255" as W0
+participant "Worker 1\n10.96.0.87" as W1
+participant "Worker 2\n10.96.0.2" as W2
+database "Data 0" as D0
+database "Data 1" as D1
+database "Data 2" as D2
+
+== Initialization ==
+
+User -> W0: start()
+activate W0
+W0 -> W0: start_server()\n(gRPC port 50051)
+W0 -> W1: connect(10.96.0.87:50051)
+W0 -> W2: connect(10.96.0.2:50051)
+
+User -> W1: start()
+activate W1
+W1 -> W1: start_server()\n(gRPC port 50051)
+W1 -> W0: connect(10.96.0.255:50051)
+W1 -> W2: connect(10.96.0.2:50051)
+
+User -> W2: start()
+activate W2
+W2 -> W2: start_server()\n(gRPC port 50051)
+W2 -> W0: connect(10.96.0.255:50051)
+W2 -> W1: connect(10.96.0.87:50051)
+
+W0 -> W0: start training_thread()
+W0 -> W0: start aggregation_thread()
+W1 -> W1: start training_thread()
+W1 -> W1: start aggregation_thread()
+W2 -> W2: start training_thread()
+W2 -> W2: start aggregation_thread()
+
+== Training Iteration k ==
+
+group Parallel Training (Async)
+    W0 -> D0: load_batch()
+    D0 --> W0: batch_data
+    W0 -> W0: forward_pass()
+    W0 -> W0: backward_pass()
+    W0 -> W0: optimizer.step()
+    W0 -> W0: update_local_model()
+    
+    W1 -> D1: load_batch()
+    D1 --> W1: batch_data
+    W1 -> W1: forward_pass()
+    W1 -> W1: backward_pass()
+    W1 -> W1: optimizer.step()
+    W1 -> W1: update_local_model()
+    
+    W2 -> D2: load_batch()
+    D2 --> W2: batch_data
+    W2 -> W2: forward_pass()
+    W2 -> W2: backward_pass()
+    W2 -> W2: optimizer.step()
+    W2 -> W2: update_local_model()
+end
+
+== Aggregation (Worker 0 Example) ==
+
+W0 -> W1: GetMetadata()
+W1 --> W0: PeerMetadata\n(data_dist, status, iteration)
+
+W0 -> W2: GetMetadata()
+W2 --> W0: PeerMetadata\n(data_dist, status, iteration)
+
+W0 -> W0: update_peer_metadata()
+W0 -> W0: peer_selection()\n(compute p_s using bandwidth + divergence)
+W0 -> W0: layer_selection()\n(compute q_s(l) using gradients)
+W0 -> W0: list_scheduling()\n(Algorithm 1: assign layers to peers)
+note right of W0
+  Strategy:
+  - Pull L1, L2 from W1
+  - Pull L3 from W2
+end note
+
+group Parallel Layer Pulling
+    W0 -> W1: PullLayers([L1, L2])
+    activate W1
+    W1 -> W1: serialize_tensors(L1, L2)
+    W1 --> W0: LayerResponse([L1_data, L2_data])
+    deactivate W1
+    
+    W0 -> W2: PullLayers([L3])
+    activate W2
+    W2 -> W2: serialize_tensors(L3)
+    W2 --> W0: LayerResponse([L3_data])
+    deactivate W2
+end
+
+W0 -> W0: deserialize_layers()
+W0 -> W0: aggregate_layers()\n(Equation 1: weighted average)
+W0 -> W0: update_model()
+
+== Worker 1 Aggregation (Parallel) ==
+
+W1 -> W0: PullLayers([...])
+activate W0
+W0 -> W0: serialize_tensors()
+W0 --> W1: LayerResponse([...])
+deactivate W0
+
+W1 -> W2: PullLayers([...])
+activate W2
+W2 -> W2: serialize_tensors()
+W2 --> W1: LayerResponse([...])
+deactivate W2
+
+W1 -> W1: aggregate_layers()
+W1 -> W1: update_model()
+
+== Worker 2 Aggregation (Parallel) ==
+
+W2 -> W0: PullLayers([...])
+activate W0
+W0 --> W2: LayerResponse([...])
+deactivate W0
+
+W2 -> W1: PullLayers([...])
+activate W1
+W1 --> W2: LayerResponse([...])
+deactivate W1
+
+W2 -> W2: aggregate_layers()
+W2 -> W2: update_model()
+
+note over W0,W2
+  All workers now have updated models
+  Iteration k+1 begins automatically
+end note
+
+== After Max Iterations ==
+
+W0 -> W0: stop()
+W0 -> W0: shutdown_network()
+deactivate W0
+
+W1 -> W1: stop()
+W1 -> W1: shutdown_network()
+deactivate W1
+
+W2 -> W2: stop()
+W2 -> W2: shutdown_network()
+deactivate W2
+
+@enduml

@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package mpls;
+
+// Service for distributed MPLS worker communication
+service MPLSService {
+  // Pull specific layers from a peer
+  rpc PullLayers(LayerRequest) returns (LayerResponse);
+  
+  // Get peer metadata (data distribution, status)
+  rpc GetMetadata(MetadataRequest) returns (PeerMetadata);
+  
+  // Heartbeat for peer discovery and health monitoring
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  
+  // Stream bandwidth test
+  rpc MeasureBandwidth(BandwidthRequest) returns (BandwidthResponse);
+}
+
+// Request to pull specific layers
+message LayerRequest {
+  int32 requester_id = 1;
+  repeated int32 layer_indices = 2;  // Which layers to pull
+  int32 iteration = 3;  // Training iteration number
+}
+
+// Response containing serialized layer parameters
+message LayerResponse {
+  int32 peer_id = 1;
+  repeated LayerData layers = 2;
+  int32 iteration = 3;
+}
+
+// Individual layer data
+message LayerData {
+  int32 layer_index = 1;
+  bytes parameters = 2;  // Serialized tensor data
+  repeated int32 shape = 3;  // Tensor shape
+  string dtype = 4;  // Data type (float32, float16, etc.)
+}
+
+// Request for peer metadata
+message MetadataRequest {
+  int32 requester_id = 1;
+}
+
+// Peer metadata including data distribution
+message PeerMetadata {
+  int32 peer_id = 1;
+  repeated float data_distribution = 2;  // Class distribution
+  string status = 3;  // "training", "idle", "aggregating"
+  int32 current_iteration = 4;
+  float compute_speed = 5;
+}
+
+// Heartbeat request
+message HeartbeatRequest {
+  int32 sender_id = 1;
+  int64 timestamp = 2;
+}
+
+// Heartbeat response
+message HeartbeatResponse {
+  int32 peer_id = 1;
+  bool alive = 2;
+  int64 timestamp = 3;
+}
+
+// Bandwidth measurement request
+message BandwidthRequest {
+  int32 requester_id = 1;
+  int32 payload_size_mb = 2;  // Size of test payload in MB
+}
+
+// Bandwidth measurement response
+message BandwidthResponse {
+  int32 peer_id = 1;
+  bytes payload = 2;  // Test data
+  int64 timestamp = 3;
+}

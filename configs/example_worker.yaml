@@ -1,0 +1,34 @@
+worker_id: 0
+listen_address: "0.0.0.0:50051"
+
+peers:
+  - id: 1
+    address: "localhost:50052"
+  - id: 2
+    address: "localhost:50053"
+
+data:
+  partition_id: 0
+  dataset: "MNIST"
+  non_iid_level: 0.5
+
+training:
+  batch_size: 32
+  learning_rate: 0.01
+  local_epochs: 1
+  max_iterations: 100
+
+mpls:
+  tau1: 0.5
+  tau2: 0.5
+
+model:
+  name: "SimpleMLP"
+
+system:
+  compute_speed: 1.0
+  device: "cpu"
+
+logging:
+  level: "INFO"
+  dir: "logs"

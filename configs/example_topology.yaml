@@ -1,0 +1,5 @@
+topology_type: "ring"
+num_workers: 5
+base_port: 50051
+base_address: "localhost"
+random_graph_prob: 0.5

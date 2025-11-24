@@ -1,0 +1,171 @@
+@startuml MPLS_Component_Diagram
+
+!define RECTANGLE_COLOR #E3F2FD
+!define COMPONENT_COLOR #E8F5E9
+!define INTERFACE_COLOR #FFF3E0
+
+title MPLS Distributed System - Component Architecture
+
+package "Server 1 (10.96.0.255)" <<RECTANGLE_COLOR>> {
+    
+    component "Worker 0 Process" as W0 {
+        [Training Thread] as W0_Train
+        [Aggregation Thread] as W0_Agg
+        [Parameter Store] as W0_Params
+        
+        W0_Train -down-> W0_Params : write
+        W0_Agg -down-> W0_Params : read/update
+    }
+    
+    component "Network Layer 0" as Net0 {
+        [gRPC Server\nPort: 50051] as Srv0
+        [gRPC Client] as Cli0
+        [Network Manager] as NetMgr0
+        
+        Cli0 -down-> NetMgr0
+        NetMgr0 -down-> Srv0
+    }
+    
+    component "MPLS Algorithms 0" as Algo0 {
+        [Peer Selection] as PS0
+        [Layer Selection] as LS0
+        [List Scheduling] as Sched0
+        
+        PS0 -down-> Sched0
+        LS0 -down-> Sched0
+    }
+    
+    database "Local Data 0\n(Non-IID)" as Data0
+    
+    W0_Train -down-> Data0 : read batches
+    W0_Agg -right-> Algo0 : uses
+    W0_Agg -down-> Net0 : pull layers
+    W0_Params -left-> Srv0 : serve requests
+}
+
+package "Server 2 (10.96.0.87)" <<RECTANGLE_COLOR>> {
+    
+    component "Worker 1 Process" as W1 {
+        [Training Thread] as W1_Train
+        [Aggregation Thread] as W1_Agg
+        [Parameter Store] as W1_Params
+        
+        W1_Train -down-> W1_Params : write
+        W1_Agg -down-> W1_Params : read/update
+    }
+    
+    component "Network Layer 1" as Net1 {
+        [gRPC Server\nPort: 50051] as Srv1
+        [gRPC Client] as Cli1
+        [Network Manager] as NetMgr1
+        
+        Cli1 -down-> NetMgr1
+        NetMgr1 -down-> Srv1
+    }
+    
+    component "MPLS Algorithms 1" as Algo1 {
+        [Peer Selection] as PS1
+        [Layer Selection] as LS1
+        [List Scheduling] as Sched1
+        
+        PS1 -down-> Sched1
+        LS1 -down-> Sched1
+    }
+    
+    database "Local Data 1\n(Non-IID)" as Data1
+    
+    W1_Train -down-> Data1 : read batches
+    W1_Agg -right-> Algo1 : uses
+    W1_Agg -down-> Net1 : pull layers
+    W1_Params -left-> Srv1 : serve requests
+}
+
+package "Server 3 (10.96.0.2)" <<RECTANGLE_COLOR>> {
+    
+    component "Worker 2 Process" as W2 {
+        [Training Thread] as W2_Train
+        [Aggregation Thread] as W2_Agg
+        [Parameter Store] as W2_Params
+        
+        W2_Train -down-> W2_Params : write
+        W2_Agg -down-> W2_Params : read/update
+    }
+    
+    component "Network Layer 2" as Net2 {
+        [gRPC Server\nPort: 50051] as Srv2
+        [gRPC Client] as Cli2
+        [Network Manager] as NetMgr2
+        
+        Cli2 -down-> NetMgr2
+        NetMgr2 -down-> Srv2
+    }
+    
+    component "MPLS Algorithms 2" as Algo2 {
+        [Peer Selection] as PS2
+        [Layer Selection] as LS2
+        [List Scheduling] as Sched2
+        
+        PS2 -down-> Sched2
+        LS2 -down-> Sched2
+    }
+    
+    database "Local Data 2\n(Non-IID)" as Data2
+    
+    W2_Train -down-> Data2 : read batches
+    W2_Agg -right-> Algo2 : uses
+    W2_Agg -down-> Net2 : pull layers
+    W2_Params -left-> Srv2 : serve requests
+}
+
+cloud "Network\n(gRPC over TCP/IP)" as Network {
+    interface "Layer Exchange\nProtocol" as Protocol
+}
+
+Cli0 -down-> Protocol : PullLayers\nGetMetadata
+Cli1 -down-> Protocol : PullLayers\nGetMetadata
+Cli2 -down-> Protocol : PullLayers\nGetMetadata
+
+Protocol -down-> Srv0 : LayerResponse\nPeerMetadata
+Protocol -down-> Srv1 : LayerResponse\nPeerMetadata
+Protocol -down-> Srv2 : LayerResponse\nPeerMetadata
+
+note right of Protocol
+  gRPC Protocol:
+  - PullLayers(LayerRequest) -> LayerResponse
+  - GetMetadata(MetadataRequest) -> PeerMetadata
+  - Heartbeat(HeartbeatRequest) -> HeartbeatResponse
+  - MeasureBandwidth(BandwidthRequest) -> BandwidthResponse
+end note
+
+package "Shared Components" {
+    component "PyTorch" as Torch {
+        [nn.Module]
+        [Optimizer]
+        [Loss Functions]
+    }
+    
+    component "torchvision" as TV {
+        [MNIST Dataset]
+        [CIFAR Dataset]
+        [DataLoader]
+    }
+    
+    component "gRPC Libraries" as GRPC {
+        [grpcio]
+        [protobuf]
+    }
+}
+
+W0 -down-> Torch : uses
+W1 -down-> Torch : uses
+W2 -down-> Torch : uses
+
+Data0 -down-> TV : loads from
+Data1 -down-> TV : loads from
+Data2 -down-> TV : loads from
+
+Net0 -down-> GRPC : uses
+Net1 -down-> GRPC : uses
+Net2 -down-> GRPC : uses
+
+@enduml

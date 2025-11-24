@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  # Shared data volume service (for dataset)
+  data-init:
+    image: python:3.10-slim
+    volumes:
+      - shared-data:/data
+    command: >
+      sh -c "pip install torchvision &&
+             python -c 'from torchvision import datasets, transforms;
+             datasets.MNIST(\"/data\", train=True, download=True);
+             datasets.MNIST(\"/data\", train=False, download=True)'"
+    
+  # Worker template (use --scale worker=N to create N workers)
+  worker:
+    build: .
+    depends_on:
+      - data-init
+    volumes:
+      - shared-data:/app/data
+      - ./configs:/app/configs
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: sh -c "sleep 10 && python scripts/run_distributed.py --num-workers 1"
+    networks:
+      - mpls-network
+    deploy:
+      replicas: 0  # Will be set via --scale
+
+networks:
+  mpls-network:
+    driver: bridge
+
+volumes:
+  shared-data:

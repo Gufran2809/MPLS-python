@@ -1,0 +1,242 @@
+@startuml MPLS_Class_Diagram
+
+!define COMPONENT_COLOR #E3F2FD
+!define WORKER_COLOR #E8F5E9
+!define NETWORK_COLOR #FFF3E0
+!define CONFIG_COLOR #F3E5F5
+
+package "Distributed MPLS System" {
+    
+    package "Configuration Layer" <<CONFIG_COLOR>> {
+        class DistributedWorkerConfig {
+            +worker_id: int
+            +listen_address: str
+            +peers: List[PeerConfig]
+            +partition_id: int
+            +dataset: str
+            +batch_size: int
+            +learning_rate: float
+            +tau1: float
+            +tau2: float
+            +max_iterations: int
+            +data_distribution: ndarray
+            --
+            +from_yaml(path: str): DistributedWorkerConfig
+            +to_yaml(path: str): void
+        }
+        
+        class PeerConfig {
+            +id: int
+            +address: str
+        }
+        
+        class TopologyConfig {
+            +topology_type: str
+            +num_workers: int
+            +base_port: int
+            +base_address: str
+            +random_graph_prob: float
+            --
+            +from_yaml(path: str): TopologyConfig
+            +to_yaml(path: str): void
+        }
+        
+        class ConfigGenerator {
+            +{static} generate_topology(config: TopologyConfig): Dict
+            +{static} generate_worker_configs(config: TopologyConfig): List[str]
+        }
+        
+        DistributedWorkerConfig o-- PeerConfig
+        ConfigGenerator ..> TopologyConfig : uses
+        ConfigGenerator ..> DistributedWorkerConfig : creates
+    }
+    
+    package "Network Communication Layer" <<NETWORK_COLOR>> {
+        class NetworkManager {
+            -worker: DistributedWorker
+            -listen_address: str
+            -server: grpc.Server
+            -stubs: Dict[int, MPLSServiceStub]
+            -channels: Dict[int, Channel]
+            -bandwidth_cache: Dict[int, float]
+            --
+            +start_server(): void
+            +stop_server(): void
+            +connect_to_peer(peer_id: int, address: str): void
+            +disconnect_from_peer(peer_id: int): void
+            +pull_layers(peer_id: int, indices: List[int]): Dict[int, Tensor]
+            +get_peer_metadata(peer_id: int): PeerMetadata
+            +heartbeat(peer_id: int): bool
+            +measure_bandwidth(peer_id: int): float
+            +get_bandwidth(peer_id: int): float
+            +shutdown(): void
+        }
+        
+        class TensorSerializer {
+            +{static} serialize_tensor(tensor: Tensor): Tuple[bytes, List, str]
+            +{static} deserialize_tensor(data: bytes, shape: List, dtype: str): Tensor
+        }
+        
+        class MPLSServicer {
+            -worker: DistributedWorker
+            -serializer: TensorSerializer
+            --
+            +PullLayers(request: LayerRequest): LayerResponse
+            +GetMetadata(request: MetadataRequest): PeerMetadata
+            +Heartbeat(request: HeartbeatRequest): HeartbeatResponse
+            +MeasureBandwidth(request: BandwidthRequest): BandwidthResponse
+        }
+        
+        NetworkManager o-- TensorSerializer
+        NetworkManager o-- MPLSServicer
+    }
+    
+    package "Worker Core" <<WORKER_COLOR>> {
+        class DistributedWorker {
+            -config: DistributedWorkerConfig
+            -model: nn.Module
+            -dataloader: DataLoader
+            -criterion: nn.Module
+            -optimizer: Optimizer
+            -network: NetworkManager
+            -current_iteration: int
+            -status: str
+            -running: bool
+            -layers: List[nn.Module]
+            -layer_sizes: List[float]
+            -peer_probs: Dict[int, float]
+            -layer_probs: Dict[int, Dict[int, float]]
+            -peer_metadata: Dict[int, PeerMetadata]
+            -training_thread: Thread
+            -aggregation_thread: Thread
+            --
+            +start(): void
+            +stop(): void
+            +get_current_model(): nn.Module
+            +get_statistics(): Dict
+            -_training_loop(): void
+            -_aggregation_loop(): void
+            -_update_peer_metadata(): void
+            -_update_selection_probabilities(): void
+            -_list_scheduling(): Dict[int, List[int]]
+            -_pull_layers_parallel(strategy: Dict): Dict
+            -_aggregate_layers(pulled_layers: Dict): void
+        }
+        
+        class WorkerConfig {
+            +worker_id: int
+            +peers: List[int]
+            +bandwidth: Dict[int, float]
+            +data_distribution: ndarray
+            +compute_speed: float
+        }
+        
+        DistributedWorker o-- DistributedWorkerConfig
+        DistributedWorker o-- NetworkManager
+        DistributedWorker ..> WorkerConfig : extends
+    }
+    
+    package "MPLS Algorithms" <<COMPONENT_COLOR>> {
+        class MPLSWorker {
+            #config: WorkerConfig
+            #model: nn.Module
+            #tau1: float
+            #tau2: float
+            #layers: List[nn.Module]
+            #layer_sizes: List[float]
+            #peer_probs: Dict[int, float]
+            #layer_probs: Dict[int, Dict[int, float]]
+            #prev_params: Dict[int, Tensor]
+            --
+            +train_epoch(dataloader, optimizer, criterion): float
+            +update_probabilities(peer_dists, peer_models): void
+            +list_scheduling(): Dict[int, List[int]]
+            +aggregate(peer_models): void
+        }
+        
+        class APPGWorker {
+            +aggregate(peer_models): void
+        }
+        
+        class NetMaxWorker {
+            +aggregate(peer_models): void
+        }
+        
+        MPLSWorker <|-- APPGWorker
+        MPLSWorker <|-- NetMaxWorker
+        DistributedWorker --|> MPLSWorker : implements algorithms
+    }
+    
+    package "Model Layer" {
+        class "nn.Module" as Model {
+            +forward(x): Tensor
+            +parameters(): Iterator
+        }
+        
+        class SimpleMLP {
+            -flatten: Flatten
+            -fc1: Linear(784, 64)
+            -relu: ReLU
+            -fc2: Linear(64, 10)
+            --
+            +forward(x): Tensor
+        }
+        
+        Model <|-- SimpleMLP
+        DistributedWorker o-- Model
+    }
+    
+    package "Utilities" {
+        class "extract_layers()" as ExtractLayers {
+            +extract_layers(model: nn.Module): List[nn.Module]
+        }
+        
+        class "get_layer_params()" as GetLayerParams {
+            +get_layer_params(layer: nn.Module): Tensor
+        }
+        
+        class "set_layer_params()" as SetLayerParams {
+            +set_layer_params(layer: nn.Module, params: Tensor): void
+        }
+        
+        DistributedWorker ..> ExtractLayers : uses
+        DistributedWorker ..> GetLayerParams : uses
+        DistributedWorker ..> SetLayerParams : uses
+    }
+}
+
+package "gRPC Protocol" {
+    class LayerRequest {
+        +requester_id: int
+        +layer_indices: List[int]
+        +iteration: int
+    }
+    
+    class LayerResponse {
+        +peer_id: int
+        +layers: List[LayerData]
+        +iteration: int
+    }
+    
+    class LayerData {
+        +layer_index: int
+        +parameters: bytes
+        +shape: List[int]
+        +dtype: str
+    }
+    
+    class PeerMetadata {
+        +peer_id: int
+        +data_distribution: List[float]
+        +status: str
+        +current_iteration: int
+        +compute_speed: float
+    }
+    
+    LayerResponse o-- LayerData
+    MPLSServicer ..> LayerRequest : receives
+    MPLSServicer ..> LayerResponse : sends
+    MPLSServicer ..> PeerMetadata : sends
+}
+
+@enduml

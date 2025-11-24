@@ -1,0 +1,156 @@
+@startuml MPLS_Deployment_Diagram
+
+title MPLS Distributed System - Deployment Architecture
+
+node "Server 1: 10.96.0.255" as Server1 {
+    artifact "Linux OS (Ubuntu 20.04+)" as OS1
+    
+    node "Python 3.10 Virtual Environment" as Env1 {
+        artifact "PyTorch 2.x" as Torch1
+        artifact "torchvision" as TV1
+        artifact "gRPC 1.76" as GRPC1
+        artifact "NumPy" as NP1
+    }
+    
+    component "MPLS Worker 0" as Worker0 {
+        artifact "worker_0.yaml\nConfig" as Cfg0
+        component "Training\nThread" as Train0
+        component "Aggregation\nThread" as Agg0
+        component "gRPC Server\n:50051" as Srv0
+        database "logs/worker_0.log" as Log0
+        database "data/MNIST" as Data0
+    }
+    
+    OS1 -down-> Env1
+    Env1 -down-> Worker0
+}
+
+node "Server 2: 10.96.0.87" as Server2 {
+    artifact "Linux OS (Ubuntu 20.04+)" as OS2
+    
+    node "Python 3.10 Virtual Environment" as Env2 {
+        artifact "PyTorch 2.x" as Torch2
+        artifact "torchvision" as TV2
+        artifact "gRPC 1.76" as GRPC2
+        artifact "NumPy" as NP2
+    }
+    
+    component "MPLS Worker 1" as Worker1 {
+        artifact "worker_1.yaml\nConfig" as Cfg1
+        component "Training\nThread" as Train1
+        component "Aggregation\nThread" as Agg1
+        component "gRPC Server\n:50051" as Srv1
+        database "logs/worker_1.log" as Log1
+        database "data/MNIST" as Data1
+    }
+    
+    OS2 -down-> Env2
+    Env2 -down-> Worker1
+}
+
+node "Server 3: 10.96.0.2" as Server3 {
+    artifact "Linux OS (Ubuntu 20.04+)" as OS3
+    
+    node "Python 3.10 Virtual Environment" as Env3 {
+        artifact "PyTorch 2.x" as Torch3
+        artifact "torchvision" as TV3
+        artifact "gRPC 1.76" as GRPC3
+        artifact "NumPy" as NP3
+    }
+    
+    component "MPLS Worker 2" as Worker2 {
+        artifact "worker_2.yaml\nConfig" as Cfg2
+        component "Training\nThread" as Train2
+        component "Aggregation\nThread" as Agg2
+        component "gRPC Server\n:50051" as Srv2
+        database "logs/worker_2.log" as Log2
+        database "data/MNIST" as Data2
+    }
+    
+    OS3 -down-> Env3
+    Env3 -down-> Worker2
+}
+
+cloud "Network Infrastructure" as Net {
+    node "TCP/IP Network" as TCP {
+        artifact "gRPC Protocol\nover HTTP/2" as Proto
+    }
+}
+
+Srv0 <-down-> Proto : Layer Exchange\n(Serialized Tensors)
+Srv1 <-down-> Proto : Layer Exchange\n(Serialized Tensors)
+Srv2 <-down-> Proto : Layer Exchange\n(Serialized Tensors)
+
+note right of Proto
+  Communication:
+  - Protocol: gRPC/HTTP2
+  - Port: 50051
+  - Message Format: Protobuf
+  - Max Message Size: 100MB
+  - Timeout: 30s
+end note
+
+node "Developer Machine\n(Local)" as Dev {
+    artifact "Source Code" as Code
+    component "Deployment Script\ndeploy_remote.sh" as Deploy
+    component "Config Generator\ngenerate_configs.py" as CfgGen
+    
+    Code -down-> Deploy
+    Code -down-> CfgGen
+}
+
+Deploy -down-> Server1 : SSH/SCP
+Deploy -down-> Server2 : SSH/SCP
+Deploy -down-> Server3 : SSH/SCP
+
+note bottom of Dev
+  Deployment Process:
+  1. Generate configs for 3 workers
+  2. Copy code to all servers
+  3. Install dependencies
+  4. Start workers in sequence
+end note
+
+package "File Structure (on each server)" {
+    folder "~/mpls_dfl/" {
+        folder "src/" {
+            artifact "distributed/\n- worker.py\n- network.py\n- config_loader.py"
+            artifact "workers.py"
+            artifact "model.py"
+        }
+        
+        folder "configs/" {
+            artifact "worker_X.yaml"
+        }
+        
+        folder "logs/" {
+            artifact "worker_X.log"
+        }
+        
+        folder "data/" {
+            artifact "MNIST/"
+        }
+        
+        artifact "requirements.txt"
+        artifact "requirements_distributed.txt"
+    }
+}
+
+note right of Server1
+  Hardware Requirements:
+  - CPU: 2+ cores
+  - RAM: 4GB+
+  - Storage: 10GB+
+  - Network: 10+ Mbps
+end note
+
+legend right
+  |<#E3F2FD> Worker 0 (10.96.0.255) |
+  |<#E8F5E9> Worker 1 (10.96.0.87)  |
+  |<#FFF3E0> Worker 2 (10.96.0.2)   |
+  
+  Topology: Ring
+  - W0 ↔ W1 ↔ W2 ↔ W0
+endlegend
+
+@enduml
