@@ -6,7 +6,7 @@
 |--------|------------|-----------|------|
 | Server 1 | 10.96.0.255 | 0 | 50051 |
 | Server 2 | 10.96.0.87 | 1 | 50051 |
-| Server 3 | 10.96.0.2 | 2 | 50051 |
+| Server 3 | 10.96.0.62 | 2 | 50051 |
 
 **Topology**: Ring (0 ↔ 1 ↔ 2 ↔ 0)
 
@@ -41,8 +41,8 @@ scp -r /home/alien/Desktop/mpls_dfl_python/* user@10.96.0.255:~/mpls_dfl/
 # Server 2 (10.96.0.87)
 scp -r /home/alien/Desktop/mpls_dfl_python/* user@10.96.0.87:~/mpls_dfl/
 
-# Server 3 (10.96.0.2)
-scp -r /home/alien/Desktop/mpls_dfl_python/* user@10.96.0.2:~/mpls_dfl/
+# Server 3 (10.96.0.62)
+scp -r /home/alien/Desktop/mpls_dfl_python/* user@10.96.0.62:~/mpls_dfl/
 ```
 
 **Note**: Replace `user` with your actual SSH username.
@@ -81,7 +81,7 @@ scp configs/remote/worker_0.yaml user@10.96.0.255:~/mpls_dfl/configs/
 scp configs/remote/worker_1.yaml user@10.96.0.87:~/mpls_dfl/configs/
 
 # Server 3
-scp configs/remote/worker_2.yaml user@10.96.0.2:~/mpls_dfl/configs/
+scp configs/remote/worker_2.yaml user@10.96.0.62:~/mpls_dfl/configs/
 ```
 
 ### Step 5: Verify Network Connectivity
@@ -91,13 +91,13 @@ On **each server**, test connectivity to peers:
 ```bash
 # From Server 1 (10.96.0.255)
 nc -zv 10.96.0.87 50051   # Test Server 2
-nc -zv 10.96.0.2 50051    # Test Server 3
+nc -zv 10.96.0.62 50051    # Test Server 3
 
 # From Server 2 (10.96.0.87)
 nc -zv 10.96.0.255 50051  # Test Server 1
-nc -zv 10.96.0.2 50051    # Test Server 3
+nc -zv 10.96.0.62 50051    # Test Server 3
 
-# From Server 3 (10.96.0.2)
+# From Server 3 (10.96.0.62)
 nc -zv 10.96.0.255 50051  # Test Server 1
 nc -zv 10.96.0.87 50051   # Test Server 2
 ```
@@ -128,7 +128,7 @@ source .venv/bin/activate
 python -m src.distributed.worker_runner --config configs/worker_1.yaml
 ```
 
-Wait 5 seconds, then **Server 3** (10.96.0.2):
+Wait 5 seconds, then **Server 3** (10.96.0.62):
 ```bash
 cd ~/mpls_dfl
 source .venv/bin/activate
@@ -220,7 +220,7 @@ export PYTHONPATH=/home/your_username/mpls_dfl:$PYTHONPATH
 # Ping test
 ping -c 3 10.96.0.255
 ping -c 3 10.96.0.87
-ping -c 3 10.96.0.2
+ping -c 3 10.96.0.62
 
 # Port test
 telnet 10.96.0.255 50051
@@ -231,7 +231,7 @@ telnet 10.96.0.255 50051
 I've created `scripts/deploy_remote.sh` for automated deployment. Run from your local machine:
 
 ```bash
-./scripts/deploy_remote.sh 10.96.0.255 10.96.0.87 10.96.0.2
+./scripts/deploy_remote.sh 10.96.0.255 10.96.0.87 10.96.0.62
 ```
 
 ## Expected Timeline

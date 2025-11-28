@@ -309,7 +309,7 @@ Figure~\ref{fig:deployment} shows the deployment across three physical servers.
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.95\textwidth]{diagrams/MPLS_Deployment_Diagram.png}
-    \caption{Deployment architecture showing three servers (10.96.0.255, 10.96.0.87, 10.96.0.2) each running a worker process with gRPC communication over TCP/IP.}
+    \caption{Deployment architecture showing three servers (10.96.0.255, 10.96.0.87, 10.96.0.62) each running a worker process with gRPC communication over TCP/IP.}
     \label{fig:deployment}
 \end{figure}
 
@@ -330,7 +330,7 @@ The default configuration uses a \textbf{ring topology}:
 \begin{tikzpicture}[node distance=4cm]
     \node[circle,draw,minimum size=2cm] (W0) {Worker 0\\10.96.0.255};
     \node[circle,draw,minimum size=2cm,right of=W0] (W1) {Worker 1\\10.96.0.87};
-    \node[circle,draw,minimum size=2cm,below of=W1] (W2) {Worker 2\\10.96.0.2};
+    \node[circle,draw,minimum size=2cm,below of=W1] (W2) {Worker 2\\10.96.0.62};
     
     \draw[<->,thick] (W0) -- node[above] {gRPC} (W1);
     \draw[<->,thick] (W1) -- node[right] {gRPC} (W2);
@@ -492,7 +492,7 @@ peers:
   - id: 1
     address: "10.96.0.87:50051"
   - id: 2
-    address: "10.96.0.2:50051"
+    address: "10.96.0.62:50051"
 
 data:
   partition_id: 0
@@ -550,7 +550,7 @@ For production deployment across servers:
 
 \begin{lstlisting}[language=bash]
 # Automated deployment
-./scripts/deploy_remote.sh 10.96.0.255 10.96.0.87 10.96.0.2
+./scripts/deploy_remote.sh 10.96.0.255 10.96.0.87 10.96.0.62
 \end{lstlisting}
 
 This script:
@@ -611,7 +611,7 @@ Log format:
 \begin{lstlisting}
 2025-11-24 21:15:32 - INFO - Worker 0 gRPC server started on 0.0.0.0:50051
 2025-11-24 21:15:33 - INFO - Worker 0 connected to peer 1 at 10.96.0.87:50051
-2025-11-24 21:15:33 - INFO - Worker 0 connected to peer 2 at 10.96.0.2:50051
+2025-11-24 21:15:33 - INFO - Worker 0 connected to peer 2 at 10.96.0.62:50051
 2025-11-24 21:15:45 - INFO - Iteration 10: Loss=0.4521, AggTime=0.34s
 2025-11-24 21:15:46 - DEBUG - Pulled 2 layers from peer 1
 \end{lstlisting}
@@ -722,11 +722,11 @@ Test network connectivity:
 \begin{lstlisting}[language=bash]
 # From server 1
 nc -zv 10.96.0.87 50051
-nc -zv 10.96.0.2 50051
+nc -zv 10.96.0.62 50051
 
 # From server 2
 nc -zv 10.96.0.255 50051
-nc -zv 10.96.0.2 50051
+nc -zv 10.96.0.62 50051
 
 # From server 3
 nc -zv 10.96.0.255 50051

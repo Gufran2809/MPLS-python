@@ -25,7 +25,7 @@ graph TB
             A2 -.->|Read/Update| P2
         end
         
-        subgraph "Server 3 (10.96.0.2)"
+        subgraph "Server 3 (10.96.0.62)"
             W3[Worker 2 Process]
             W3 --> T3[Training Thread]
             W3 --> A3[Aggregation Thread]
@@ -282,7 +282,7 @@ graph TB
     subgraph "Ring Topology"
         W0[Worker 0<br/>10.96.0.255:50051<br/>Peers: 1, 2]
         W1[Worker 1<br/>10.96.0.87:50051<br/>Peers: 0, 2]
-        W2[Worker 2<br/>10.96.0.2:50051<br/>Peers: 0, 1]
+        W2[Worker 2<br/>10.96.0.62:50051<br/>Peers: 0, 1]
         
         W0 <-->|BW: 10-15 MB/s| W1
         W1 <-->|BW: 10-15 MB/s| W2
@@ -393,7 +393,7 @@ graph TB
             S2_W --> S2_PORT[Port 50051]
         end
         
-        subgraph "Server 3: 10.96.0.2"
+        subgraph "Server 3: 10.96.0.62"
             S3_OS[Linux OS]
             S3_OS --> S3_PY[Python 3.10 + venv]
             S3_PY --> S3_CODE[Project Code]

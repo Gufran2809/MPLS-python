@@ -3,14 +3,14 @@
 ## 🎯 Your Server IPs
 - **Server 1**: 10.96.0.255 (Worker 0)
 - **Server 2**: 10.96.0.87 (Worker 1)  
-- **Server 3**: 10.96.0.2 (Worker 2)
+- **Server 3**: 10.96.0.62 (Worker 2)
 
 ## Option 1: Automated Deployment (Recommended)
 
 Run this **ONE command** from your local machine:
 
 ```bash
-./scripts/deploy_remote.sh 10.96.0.255 10.96.0.87 10.96.0.2
+./scripts/deploy_remote.sh 10.96.0.255 10.96.0.87 10.96.0.62
 ```
 
 This will:
@@ -29,7 +29,7 @@ ssh user@10.96.0.255 'cd ~/mpls_dfl && source .venv/bin/activate && python -m sr
 ssh user@10.96.0.87 'cd ~/mpls_dfl && source .venv/bin/activate && python -m src.distributed.worker_runner --config configs/worker.yaml'
 
 # Wait 10 seconds, then Server 3
-ssh user@10.96.0.2 'cd ~/mpls_dfl && source .venv/bin/activate && python -m src.distributed.worker_runner --config configs/worker.yaml'
+ssh user@10.96.0.62 'cd ~/mpls_dfl && source .venv/bin/activate && python -m src.distributed.worker_runner --config configs/worker.yaml'
 ```
 
 ## Option 2: Manual Step-by-Step
@@ -40,7 +40,7 @@ ssh user@10.96.0.2 'cd ~/mpls_dfl && source .venv/bin/activate && python -m src.
 # From your local machine
 scp -r /home/alien/Desktop/mpls_dfl_python user@10.96.0.255:~/mpls_dfl
 scp -r /home/alien/Desktop/mpls_dfl_python user@10.96.0.87:~/mpls_dfl
-scp -r /home/alien/Desktop/mpls_dfl_python user@10.96.0.2:~/mpls_dfl
+scp -r /home/alien/Desktop/mpls_dfl_python user@10.96.0.62:~/mpls_dfl
 ```
 
 ### Step 2: Install on each server
@@ -61,7 +61,7 @@ python -m grpc_tools.protoc -I./proto --python_out=./src/distributed --grpc_pyth
 # From local machine
 scp configs/remote/worker_0.yaml user@10.96.0.255:~/mpls_dfl/configs/
 scp configs/remote/worker_1.yaml user@10.96.0.87:~/mpls_dfl/configs/
-scp configs/remote/worker_2.yaml user@10.96.0.2:~/mpls_dfl/configs/
+scp configs/remote/worker_2.yaml user@10.96.0.62:~/mpls_dfl/configs/
 ```
 
 ### Step 4: Start workers
@@ -75,7 +75,7 @@ python -m src.distributed.worker_runner --config configs/worker_0.yaml
 cd ~/mpls_dfl && source .venv/bin/activate
 python -m src.distributed.worker_runner --config configs/worker_1.yaml
 
-# Wait 10 seconds, then on Server 3 (10.96.0.2)
+# Wait 10 seconds, then on Server 3 (10.96.0.62)
 cd ~/mpls_dfl && source .venv/bin/activate
 python -m src.distributed.worker_runner --config configs/worker_2.yaml
 ```
@@ -97,7 +97,7 @@ Look for:
 You should see messages like:
 ```
 Worker 0 connected to peer 1 at 10.96.0.87:50051
-Worker 0 connected to peer 2 at 10.96.0.2:50051
+Worker 0 connected to peer 2 at 10.96.0.62:50051
 Pulled 2 layers from peer 1
 Iteration 10: Loss=0.45, AggTime=0.5s
 ```

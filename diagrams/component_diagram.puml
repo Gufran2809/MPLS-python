@@ -80,7 +80,7 @@ package "Server 2 (10.96.0.87)" <<RECTANGLE_COLOR>> {
     W1_Params -left-> Srv1 : serve requests
 }
 
-package "Server 3 (10.96.0.2)" <<RECTANGLE_COLOR>> {
+package "Server 3 (10.96.0.62)" <<RECTANGLE_COLOR>> {
     
     component "Worker 2 Process" as W2 {
         [Training Thread] as W2_Train

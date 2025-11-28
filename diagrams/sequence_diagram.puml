@@ -5,7 +5,7 @@ title Distributed MPLS Training - Single Iteration
 actor User
 participant "Worker 0\n10.96.0.255" as W0
 participant "Worker 1\n10.96.0.87" as W1
-participant "Worker 2\n10.96.0.2" as W2
+participant "Worker 2\n10.96.0.62" as W2
 database "Data 0" as D0
 database "Data 1" as D1
 database "Data 2" as D2
@@ -16,13 +16,13 @@ User -> W0: start()
 activate W0
 W0 -> W0: start_server()\n(gRPC port 50051)
 W0 -> W1: connect(10.96.0.87:50051)
-W0 -> W2: connect(10.96.0.2:50051)
+W0 -> W2: connect(10.96.0.62:50051)
 
 User -> W1: start()
 activate W1
 W1 -> W1: start_server()\n(gRPC port 50051)
 W1 -> W0: connect(10.96.0.255:50051)
-W1 -> W2: connect(10.96.0.2:50051)
+W1 -> W2: connect(10.96.0.62:50051)
 
 User -> W2: start()
 activate W2

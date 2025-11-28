@@ -8,7 +8,7 @@ NUM_SERVERS=${#SERVERS[@]}
 
 if [ $NUM_SERVERS -eq 0 ]; then
     echo "Usage: $0 <server1_ip> <server2_ip> <server3_ip> ..."
-    echo "Example: $0 10.96.0.255 10.96.0.87 10.96.0.2"
+    echo "Example: $0 10.96.0.255 10.96.0.87 10.96.0.62"
     exit 1
 fi
 

@@ -48,7 +48,7 @@ node "Server 2: 10.96.0.87" as Server2 {
     Env2 -down-> Worker1
 }
 
-node "Server 3: 10.96.0.2" as Server3 {
+node "Server 3: 10.96.0.62" as Server3 {
     artifact "Linux OS (Ubuntu 20.04+)" as OS3
     
     node "Python 3.10 Virtual Environment" as Env3 {
@@ -147,7 +147,7 @@ end note
 legend right
   |<#E3F2FD> Worker 0 (10.96.0.255) |
   |<#E8F5E9> Worker 1 (10.96.0.87)  |
-  |<#FFF3E0> Worker 2 (10.96.0.2)   |
+  |<#FFF3E0> Worker 2 (10.96.0.62)   |
   
   Topology: Ring
   - W0 ↔ W1 ↔ W2 ↔ W0
